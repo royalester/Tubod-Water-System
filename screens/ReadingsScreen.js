@@ -1,6 +1,8 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, StyleSheet, FlatList, TextInput, Button, ActivityIndicator, Modal } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
+// import { getReadings, getHouseholds } from '../services/api';
+import axios from 'axios';
 // const mongoose = require('mongoose');
 // const twilio = require('twilio');
 
@@ -36,7 +38,8 @@ export default function ReadingsScreen() {
    // Fetch households on mount
   useEffect(() => {
   setLoading(true); // start loading
-  fetch('http://192.168.6.29:3001/households')
+  // fetch('http://192.168.3.35:3001/households')
+  fetch('http://192.168.43.43:3001/households')
     .then(res => res.json())
     .then(data => {
       setHouseholds(data);
@@ -64,26 +67,70 @@ export default function ReadingsScreen() {
     }));
   };
 
+  // const handleSave = async (id) => {
+  //   setSaving(id);
+  //   const reading = readings[id];
+
+  //   const household = households.find(h => h._id === id);
+  // if (!household) {
+  //   Alert.alert('Error', 'Household not found.');
+  //   return;
+  // }
+  //   const payload = {
+  //     householdId: households.find(h => h._id === id).householdId,
+  //     previous: Number(readings[id].previous),
+  //     current: Number(readings[id].current),
+  //   };
+
+  //   try {
+  //     // const response = await axios.post('http://192.168.3.35:3001/billing/generate', {
+  //   const response = await axios.post('http://192.168.43.59:3001/billing/generate', {
+  //     householdId: household.householdId,
+  //     previous: parseFloat(reading.previous),
+  //     current: parseFloat(reading.current)
+  //   });
+
+  //   setReceiptData(response.data);
+  //   setShowReceipt(true);
+
+  //   // Optionally show a toast
+  //   Alert.alert('Success', 'Billing generated and SMS notification sent!');
+  // } catch (error) {
+  //   console.error('Error saving reading:', error);
+  //   Alert.alert('Error', 'Failed to generate bill.');
+  // } finally {
+  //   setSaving(false);
+  // }
+  // };
   const handleSave = async (id) => {
-    setSaving(id);
-    const reading = readings[householdId];
+  setSaving(id);
+  const reading = readings[id];
 
-    const payload = {
-      householdId: households.find(h => h._id === id).householdId,
-      previous: Number(readings[id].previous),
-      current: Number(readings[id].current),
-    };
+  const household = households.find(h => h._id === id);
+  if (!household) {
+    Alert.alert('Error', 'Household not found.');
+    setSaving(false);
+    return;
+  }
 
-    try {
-    const response = await axios.post('http://192.168.112.1:3001/billing/generate', {
-      householdId,
+  try {
+    const response = await axios.post('http://192.168.43.43:3001/billing/single', {
+      householdId: household.householdId,
       previous: parseFloat(reading.previous),
-      current: parseFloat(reading.current)
+      current: parseFloat(reading.current),
     });
 
-    setReceiptData(response.data);
+    // Make sure to set all expected fields for receiptData
+    setReceiptData({
+      householdId: household.householdId,
+      ownerName: household.ownerName,
+      previous: response.data.previous,
+      current: response.data.current,
+      usage: response.data.usage,
+      amount: response.data.amount, // bill amount
+      date: response.data.date,
+    });
     setShowReceipt(true);
-
     // Optionally show a toast
     Alert.alert('Success', 'Billing generated and SMS notification sent!');
   } catch (error) {
@@ -92,7 +139,8 @@ export default function ReadingsScreen() {
   } finally {
     setSaving(false);
   }
-  };
+};
+
 
   const filteredHouseholds = households.filter(h =>
     h.ownerName.toLowerCase().includes(search.toLowerCase()) ||
@@ -121,34 +169,38 @@ export default function ReadingsScreen() {
         data={filteredHouseholds}
         keyExtractor={item => item._id}
         renderItem={({ item }) => (
-          <View style={styles.row}>
-            <Text style={styles.idCell}>{item.householdId}</Text>
-            <Text style={styles.name}>{item.ownerName}</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Previous"
-              keyboardType="numeric"
-              value={readings[item._id]?.previous || ''}
-              onChangeText={val => handleInput(item._id, 'previous', val)}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Current"
-              keyboardType="numeric"
-              value={readings[item._id]?.current || ''}
-              onChangeText={val => handleInput(item._id, 'current', val)}
-            />
-            <Button
-              title={saving === item._id ? 'Saving...' : 'Save'}
-              onPress={() => handleSave(item._id)}
-              disabled={
-                saving === item._id ||
-                !readings[item._id]?.previous ||
-                !readings[item._id]?.current
-              }
-            />
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>{item.householdId} - {item.ownerName}</Text>
+            <Text style={styles.cardDetail}>Mobile: {item.mobile}</Text>
+            <Text style={styles.cardDetail}>Purok: {item.purok}</Text>
+            <View style={styles.cardInputRow}>
+              <TextInput
+                style={styles.input}
+                placeholder="Previous"
+                keyboardType="numeric"
+                value={readings[item._id]?.previous || ''}
+                onChangeText={val => handleInput(item._id, 'previous', val)}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Current"
+                keyboardType="numeric"
+                value={readings[item._id]?.current || ''}
+                onChangeText={val => handleInput(item._id, 'current', val)}
+              />
+              <Button
+                title={saving === item._id ? 'Saving...' : 'Save'}
+                onPress={() => handleSave(item._id)}
+                disabled={
+                  saving === item._id ||
+                  !readings[item._id]?.previous ||
+                  !readings[item._id]?.current
+                }
+              />
+            </View>
           </View>
         )}
+        contentContainerStyle={{ paddingBottom: 100 }}
       />
       <Modal
         visible={showReceipt}
@@ -235,5 +287,27 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
     marginBottom: 10,
+  },
+  card: {
+    backgroundColor: '#f9f9f9',
+    borderRadius: 10,
+    padding: 14,
+    marginBottom: 12,
+    elevation: 2,
+  },
+  cardTitle: {
+    fontWeight: 'bold',
+    fontSize: 16,
+    marginBottom: 2,
+  },
+  cardDetail: {
+    fontSize: 14,
+    marginBottom: 2,
+    color: '#555',
+  },
+  cardInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 6,
   },
 });

@@ -1,0 +1,27 @@
+version: '3.8'
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "19000:19000"   # For Expo Go on Android
+      - "19001:19001"   # For Metro bundler debugging
+      - "19002:19002"   # For Expo Web UI
+    volumes:
+      - .:/app
+    stdin_open: true
+    tty: true
+
+
+# services:
+#   frontend:
+#     build:
+#       context: .
+#       dockerfile: Dockerfile
+#     ports:
+#       - "19000:19000"   # Expo Go app port
+#       - "19001:19001"   # Metro bundler (for JavaScript debugging)
+#       - "19002:19002"   # Expo DevTools web UI
+#     stdin_open: true    # Needed for interactive CLI
+#     tty: true

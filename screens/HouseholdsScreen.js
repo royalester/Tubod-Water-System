@@ -3,14 +3,16 @@ import { View, Text, FlatList, StyleSheet, ActivityIndicator } from 'react-nativ
 import axios from 'axios';
 
 const HouseholdsScreen = ({ route }) => {
-  const { householdId } = route.params; // passed from previous screen
+  // const { householdId } = route.params; // passed from previous screen
+  const householdId = route?.params?.householdId || 'TBD001'; // hardcoded for testing, replace with actual householdId from route params
   const [billingHistory, setBillingHistory] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchBillingHistory = async () => {
       try {
-        const res = await axios.get(`http://192.168.6.29:3001/billing/history/${householdId}`);
+        // const res = await axios.get(`http://192.168.3.35:3001/billing/history/${householdId}`);
+        const res = await axios.get(`http://.168.43.43:3001/billing/history/${householdId}`);
         setBillingHistory(res.data);
       } catch (err) {
         console.error('Failed to load billing history:', err);
